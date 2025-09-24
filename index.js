@@ -1,26 +1,20 @@
-const express = require('express')
 const dotenv = require('dotenv')
-const cookieParser = require('cookie-parser')
+const http = require('http')
 const ConnectDB = require('./ConnectDB.js/connectdb.js')
-const { UserRoutes } = require('./Routes/user.routes.js')
-const GroupRoutes = require('./Routes/group.routes.js')
+const socketAuth = require('./Socket/middelware.js')
+const initSocket = require('./Socket/io.js')
+const app = require('./app.js')
 
 dotenv.config()
 
-const app = express()
 const PORT = process.env.PORT
+const server = http.createServer(app)
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-app.use(cookieParser())
-app.use('/images', express.static('Avatars/'))
-
-app.use('/api/user', UserRoutes)
-app.use('/api/gc', GroupRoutes)
+initSocket(server, socketAuth)
 
 ConnectDB()
     .then(
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log(`http://localhost:${PORT}`)
         })
     )

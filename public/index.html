@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Socket.IO Chat with JWT</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <h2>Private Chat Test</h2>
+
+    <!-- JWT input -->
+    <label>JWT Token:</label>
+    <input id="token" placeholder="Paste your JWT here" style="width:400px" />
+    <button onclick="connectSocket()">Connect</button>
+
+    <hr>
+
+    <!-- Chat inputs -->
+    <label>Send To (User ID):</label>
+    <input id="receiverId" placeholder="Receiver ID" /><br>
+    <label>Message:</label>
+    <input id="message" placeholder="Your message" /><br>
+    <button onclick="sendMessage()">Send</button>
+
+    <h3>Messages:</h3>
+    <div id="chat" style="border:1px solid #ccc; padding:10px; width:500px; height:300px; overflow:auto;"></div>
+
+    <script>
+        let socket;
+
+        function connectSocket() {
+            const jwt = document.getElementById("token").value;
+            if (!jwt) return alert("Please enter JWT token!");
+
+            // Pass JWT via auth
+            socket = io("http://localhost:5000", {
+                transports: ["websocket"],
+                auth: {
+                    token: jwt
+                }
+            });
+
+            socket.on("connect", () => {
+                console.log("✅ Connected:", socket.id);
+                document.getElementById("chat").innerHTML += `<p>✅ Connected to server</p>`;
+            });
+
+            socket.on("connect_error", (err) => {
+                console.log("❌ Connection error:", err.message);
+                document.getElementById("chat").innerHTML += `<p>❌ Connection error: ${err.message}</p>`;
+            });
+
+            socket.on("private-chat", (msg) => {
+                document.getElementById("chat").innerHTML += `<p><b>${msg.senderId}:</b> ${msg.message} ${msg.online ? "(online)" : "(offline)"}</p>`;
+            });
+        }
+
+        function sendMessage() {
+            if (!socket) return alert("Connect first!");
+
+            const receiverId = document.getElementById("receiverId").value;
+            const text = document.getElementById("message").value;
+
+            socket.emit("private-chat", { receiverId, msg: text });
+            document.getElementById("chat").innerHTML += `<p><b>You:</b> ${text}</p>`;
+        }
+    </script>
+</body>
+
+</html>

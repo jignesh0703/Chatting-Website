@@ -1,6 +1,17 @@
 const { UserModel } = require("../Model/user.model")
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
+require('dotenv').config()
+
+const key = Buffer.from(process.env.CRYPTO_KEY, 'utf8');
+const encryptId = (id) => {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(process.env.CRYPTO_ALGORITHM, key, iv);
+    let encrypted = cipher.update(id.toString(), 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+};
 
 const Regitration = async (req, res) => {
     try {
@@ -56,7 +67,7 @@ const Login = async (req, res) => {
 
         const token = jwt.sign(
             {
-                _id: FindEmail._id
+                _id: encryptId(FindEmail._id)
             },
             process.env.JWT_KEY,
             {
@@ -79,6 +90,7 @@ const Login = async (req, res) => {
             }
         })
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ message: 'Somthinng went wrong, try again!' })
     }
 }

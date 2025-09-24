@@ -12,28 +12,24 @@ const decryptId = (encryptedId) => {
     return decrypted;
 };
 
-const JWTAuth = async (req, res, next) => {
+const socketAuth = (socket, next) => {
     try {
-        const token = req.cookies?.token
-        if (!token) {
-            return res.status(400).json({ message: 'Login is required!' })
-        }
+        // Read token from auth.token
+        const token = socket.handshake.auth?.token; 
 
-        const decode = jwt.verify(token, process.env.JWT_KEY)
-        if (!decode) {
-            return res.status(401).json({ message: 'Invalid token' })
-        }
+        if (!token) return next(new Error('Authentication error'));
+
+        const decode = jwt.verify(token, process.env.JWT_KEY);
+        if (!decode) return next(new Error('Invalid token'));
 
         const userId = decryptId(decode._id);
-        req.id = userId
-        next()
+        socket.data.userId = userId;
 
+        next();
     } catch (error) {
-        console.log(error)
-        return res.status(502).json({ message: 'Login is required!' })
+        console.log(error);
+        next(new Error('Authentication error!'));
     }
 }
 
-module.exports = {
-    JWTAuth
-}
+module.exports = socketAuth
