@@ -15,7 +15,7 @@ const decryptId = (encryptedId) => {
 const socketAuth = (socket, next) => {
     try {
         // Read token from auth.token
-        const token = socket.handshake.auth?.token; 
+        const token = socket.handshake.auth?.token || socket.handshake.query.token;
 
         if (!token) return next(new Error('Authentication error'));
 

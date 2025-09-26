@@ -1,6 +1,10 @@
 const { Server } = require('socket.io')
-const cors = require('cors')
-const MsgModel = require('../Model/message.model.js')
+const PrivateChat = require('./Msgs/private_chat.js')
+const EditMsgs = require('./Msgs/edit_msg.js')
+const GroupModel = require('../Model/group.model.js')
+const AddMeber = require('./Msgs/add_member.js')
+const GroupChat = require('./Msgs/group_chat.js')
+const DeleteMsg = require('./Msgs/delete_msg.js')
 
 let OnlineUser = new Map()
 
@@ -24,37 +28,54 @@ function initSocket(server, socketAuth) {
         OnlineUser.get(senderId).add(socket.id)
 
         socket.on('private-chat', async ({ receiverId, msg }) => {
-            const senderId = socket.data.userId;
-            let conversationId = [senderId, receiverId].sort().join('-');
-
-            const NewMsg = await MsgModel.create({
-                senderId,
-                receiverId,
-                conversationId,
-                message: msg
-            });
-
-            const isReceiverOnline = OnlineUser.has(receiverId);
-
-            const msgToSend = {
-                ...NewMsg.toObject(),
-                online: isReceiverOnline
-            };
-
-            if (isReceiverOnline) {
-                for (let sockId of OnlineUser.get(receiverId)) {
-                    io.to(sockId).emit('private-chat', msgToSend);
-                }
-            }
-
-            if (OnlineUser.has(senderId)) {
-                for (let sockId of OnlineUser.get(senderId)) {
-                    if (sockId !== socket.id) {
-                        io.to(sockId).emit('private-chat', msgToSend);
-                    }
-                }
-            }
+            PrivateChat(socket, receiverId, msg, OnlineUser, io)
         });
+
+        socket.on('edit-msg', async ({ mesgId, NewMsg }) => {
+            EditMsgs(mesgId, NewMsg, OnlineUser, io, socket)
+        })
+
+        socket.on('add-gc-member', async ({ GCId, MemberId }) => {
+            AddMeber(GCId, MemberId, socket, OnlineUser, io)
+        })
+
+        socket.on('remove-gc-member', async ({ GCId, MemberId }) => {
+            try {
+                const group = await GroupModel.findById(GCId);
+                if (!group) return socket.emit('remove-member-error', { message: `Group don't found!` });
+
+                const requestingUserId = socket.data.userId
+
+                const admin = group.members.find(m => m.memberdetail.toString() === requestingUserId && m.isadmin)
+                if (!admin) return socket.emit('remove-member-error', { message: 'User dont allow to remove user, Only admins can do!' });
+
+                if (group.members.some(m => m.memberdetail.toString() === MemberId)) {
+                    return socket.emit('remove-member-error', { message: `Member dont exist in ${group.gcname}` })
+                }
+
+                group.members = group.members.filter(m => m.memberdetail.toString() !== MemberId)
+                await group.save()
+
+                group.members.forEach(m => {
+                    const UserID = m.memberdetail.toString()
+                    if (OnlineUser.has(UserID)) {
+                        io.to(socket)
+                    }
+                })
+
+
+            } catch (error) {
+                socket.emit('remove-member-error', { message: error.message || 'Somthinkg went wrong' })
+            }
+        })
+
+        socket.on('group-chat', async ({ GCId, mesg }) => {
+            GroupChat(GCId, mesg, socket, OnlineUser, io)
+        })
+
+        socket.on('delete-messgae', async ({ MsgId }) => {
+            DeleteMsg(MsgId, socket, io, OnlineUser)
+        })
 
         socket.on('disconnect', () => {
             console.log('New connection close')

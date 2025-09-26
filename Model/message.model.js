@@ -8,11 +8,18 @@ const MsgSchema = new mongoose.Schema(
         },
         receiverId: {
             type: mongoose.Types.ObjectId,
-            ref: 'user'
+            ref: 'user',
+            default: null
         },
         conversationId: {
             type: String,
-            required: true
+            required: true,
+            default: null
+        },
+        groupid: {
+            type: mongoose.Types.ObjectId,
+            ref: 'group',
+            default: null
         },
         message: {
             type: String,
@@ -33,5 +40,4 @@ const MsgSchema = new mongoose.Schema(
 )
 
 const MsgModel = mongoose.model('message', MsgSchema)
-
 module.exports = MsgModel

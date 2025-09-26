@@ -42,7 +42,7 @@ const CreateGC = async (req, res) => {
     }
 }
 
-const ListAlLGC = async (req, res) => {
+const ListAllGC = async (req, res) => {
     try {
         const FindGCs = await GroupModel.find()
         return res.status()
