@@ -1,11 +1,23 @@
+<<<<<<< HEAD
 const AddMeber = async (GCId, MemberId, socket, OnlineUser, io) => {
     try {
         const group = await GroupModel.findById(GCId)
         if (!group) return socket.emit('add-member-error', { message: 'Group dont found' });
+=======
+const GroupModel = require("../../Model/group.model.js");
+
+const AddMeber = async (GCId, MemberIds, socket, OnlineUser, io) => {
+    try {
+        const group = await GroupModel.findById(GCId)
+        if (!group) {
+            return socket.emit('add-gc-member', { sucess: false, message: 'Group dont found' });
+        }
+>>>>>>> 8b8c338 (Made other Emits)
 
         const requestingUserId = socket.data.userId
 
         const admin = group.members.find(m => m.memberdetail.toString() === requestingUserId && m.isadmin)
+<<<<<<< HEAD
         if (!admin) {
             return socket.emit('add-member-error', { message: 'Only group admin can add members!' });
         }
@@ -41,6 +53,71 @@ const AddMeber = async (GCId, MemberId, socket, OnlineUser, io) => {
         }
 
         savemember()
+=======
+
+        if (!admin) {
+            return socket.emit('add-member-error', { success: true, message: 'Only group admin can add members!' });
+        }
+
+        for (const MemberId of MemberIds) {
+
+            if (group.members.some(m => m.memberdetail.toString() === MemberId)) {
+                socket.emit('add-member-error', { sucess: false, message: 'Member already in group!' });
+                continue;
+            }
+
+            const newmemberdetail = { memberdetail: MemberId, isadmin: false }
+
+            for (const member of group.members) {
+                const userIdStr = member.memberdetail.toString();
+                if (userIdStr === MemberId.toString()) continue; // skip new member
+                if (OnlineUser.has(userIdStr)) {
+                    for (const socketId of OnlineUser.get(userIdStr)) {
+                        console.log('notify existing member', userIdStr, socketId);
+                        io.to(socketId).emit('member-added', {
+                            success: true,
+                            data: { groupId: GCId, newMemberId: MemberId }
+                        });
+                    }
+                }
+            }
+
+            // --- Notify the newly added member (if online) ---
+            const newMemberKey = MemberId.toString();
+            if (OnlineUser.has(newMemberKey)) {
+                for (const socketId of OnlineUser.get(newMemberKey)) {
+                    io.to(socketId).emit('added-to-group', {
+                        success: true,
+                        data: { groupId: GCId, addedBy: requestingUserId }
+                    });
+                }
+            }
+
+            socket.emit('add-member-success', {
+                success: true,
+                data: {
+                    groupId: GCId,
+                    newMemberId: MemberId
+                }
+            });
+
+            const savemember = async (retry = 3, delay = 1000) => {
+                try {
+                    group.members.push(newmemberdetail);
+                    await group.save();
+                    console.log(`Member ${MemberId} saved in ${group.gcname}`);
+                } catch (error) {
+                    if (retry > 0) {
+                        setTimeout(() => {
+                            savemember(retry - 1, delay)
+                        }, delay);
+                    }
+                }
+            }
+
+            savemember()
+        }
+>>>>>>> 8b8c338 (Made other Emits)
 
     } catch (error) {
         return socket.emit('add-member-error', { message: error.message || 'Somthing went wrong!' })

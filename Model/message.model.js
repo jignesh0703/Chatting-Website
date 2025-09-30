@@ -13,7 +13,10 @@ const MsgSchema = new mongoose.Schema(
         },
         conversationId: {
             type: String,
+<<<<<<< HEAD
             required: true,
+=======
+>>>>>>> 8b8c338 (Made other Emits)
             default: null
         },
         groupid: {

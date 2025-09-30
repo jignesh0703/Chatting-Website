@@ -2,9 +2,16 @@ const { UserModel } = require("../Model/user.model")
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
+<<<<<<< HEAD
 require('dotenv').config()
 
 const key = Buffer.from(process.env.CRYPTO_KEY, 'utf8');
+=======
+const MsgModel = require("../Model/message.model")
+require('dotenv').config()
+
+const key = Buffer.from(process.env.CRYPTO_KEY, 'hex');
+>>>>>>> 8b8c338 (Made other Emits)
 const encryptId = (id) => {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(process.env.CRYPTO_ALGORITHM, key, iv);
@@ -136,9 +143,48 @@ const FetchAllUsers = async (req, res) => {
     }
 }
 
+<<<<<<< HEAD
+=======
+const FetchChats = async (req, res) => {
+    try {
+        const id = req.id
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Login is required!' })
+        }
+
+        console.log(req.params.receiverId)
+
+        if (req.params.receiverId) {
+            const receiverId = req.params.receiverId
+            const conversationId = [id, receiverId].sort().join('-')
+            console.log(conversationId)
+
+            const messages = await MsgModel.find({ conversationId }).sort({ createdAt: -1 }).select('-groupid -updatedAt -__v')
+            return res.status(200).json({
+                success: true,
+                data: {
+                    messages
+                }
+            })
+
+        } else {
+            return res.status(400).json({ success: false, message: 'Dont pass receiverid or gcid' })
+        }
+
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Somthing went wrong, try again!' })
+    }
+}
+
+>>>>>>> 8b8c338 (Made other Emits)
 module.exports = {
     Regitration,
     Login,
     FetchUserDatail,
+<<<<<<< HEAD
     FetchAllUsers
+=======
+    FetchAllUsers,
+    FetchChats
+>>>>>>> 8b8c338 (Made other Emits)
 }
