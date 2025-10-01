@@ -5,21 +5,13 @@ const EditMsgs = async (mesgId, NewMsg, OnlineUser, io, socket) => {
     try {
         const FindMsg = await MsgModel.findById(mesgId)
         if (!FindMsg) {
-<<<<<<< HEAD
-            return socket.emit('edit-msg-error', { message: 'Incorrect message id!' })
-=======
             return socket.emit('edit-msg-error', { success: false, message: 'Incorrect message id!' })
->>>>>>> 8b8c338 (Made other Emits)
         }
 
         const requestingUserId = socket.data.userId
 
         if (FindMsg.senderId.toString() !== requestingUserId) {
-<<<<<<< HEAD
-            return socket.emit('edit-msg-error', { message: 'User not allowed to edit message!' })
-=======
             return socket.emit('edit-msg-error', { success: false, message: 'User not allowed to edit message!' })
->>>>>>> 8b8c338 (Made other Emits)
         }
 
         const EditedMsg = {
@@ -35,16 +27,12 @@ const EditMsgs = async (mesgId, NewMsg, OnlineUser, io, socket) => {
             [senderId, receiverId].forEach(userId => {
                 if (OnlineUser.has(userId)) {
                     for (let socketId of OnlineUser.get(userId)) {
-<<<<<<< HEAD
-                        io.to(socketId).emit('message-edited', EditedMsg)
-=======
                         io.to(socketId).emit('message-edited', {
                             success: true,
                             data: {
                                 EditMsgs
                             }
                         })
->>>>>>> 8b8c338 (Made other Emits)
                     }
                 }
             })
@@ -56,16 +44,12 @@ const EditMsgs = async (mesgId, NewMsg, OnlineUser, io, socket) => {
                 const memberid = m.memberdetail.toString()
                 if (OnlineUser.has(memberid)) {
                     for (let socketId of OnlineUser.get(memberid)) {
-<<<<<<< HEAD
-                        io.to(socketId).emit('message-edited', EditedMsg)
-=======
                         io.to(socketId).emit('message-edited', {
                             success: false,
                             data: {
                                 EditMsgs
                             }
                         })
->>>>>>> 8b8c338 (Made other Emits)
                     }
                 }
             })
@@ -84,11 +68,7 @@ const EditMsgs = async (mesgId, NewMsg, OnlineUser, io, socket) => {
                         saveEdit(retry - 1, delay)
                     }, delay);
                 } else {
-<<<<<<< HEAD
-                    return socket.emit('edit-msg-error', { message: 'Something went wrong while saving edit!' })
-=======
                     return socket.emit('edit-msg-error', { success: false, message: 'Something went wrong while saving edit!' })
->>>>>>> 8b8c338 (Made other Emits)
                 }
             }
         }
@@ -96,11 +76,7 @@ const EditMsgs = async (mesgId, NewMsg, OnlineUser, io, socket) => {
         saveEdit()
 
     } catch (error) {
-<<<<<<< HEAD
-        socket.emit('edit-msg-error', { message: 'Something went wrong while saving edit!' });
-=======
         socket.emit('edit-msg-error', { success: false, message: 'Something went wrong while saving edit!' });
->>>>>>> 8b8c338 (Made other Emits)
     }
 }
 

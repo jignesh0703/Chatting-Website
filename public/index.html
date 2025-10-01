@@ -3,39 +3,36 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Socket.IO Chat with JWT</title>
+    <title>Socket.IO Chat with Files</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 
 <body>
-    <h2>Private Chat Test</h2>
+    <h2>Socket.IO Chat Test</h2>
 
-    <!-- JWT input -->
+    <!-- JWT Input -->
     <label>JWT Token:</label>
     <input id="token" placeholder="Paste your JWT here" style="width:400px" />
     <button onclick="connectSocket()">Connect</button>
-
     <hr>
 
-    <!-- Chat inputs -->
-    <label>Send To (User ID):</label>
+    <!-- Chat Inputs -->
+    <label>Send To (User ID) [Private Chat]:</label>
     <input id="receiverId" placeholder="Receiver ID" /><br>
+
+    <label>Send To (Group ID) [Group Chat]:</label>
+    <input id="gcId" placeholder="Group ID" /><br>
+
     <label>Message:</label>
-    <input id="message" placeholder="Your message" /><br>
+    <input id="message" placeholder="Your message" style="width:300px;" /><br>
+
+    <label>Files (optional):</label>
+    <input type="file" id="fileInput" multiple /><br>
+
     <button onclick="sendMessage()">Send</button>
-
     <hr>
 
-    <!-- Edit message inputs -->
-    <h3>Edit Message</h3>
-    <label>Message ID:</label>
-    <input id="editMsgId" placeholder="Message ID to edit" style="width:400px" /><br>
-    <label>New Text:</label>
-    <input id="editMsgText" placeholder="New message text" style="width:400px" /><br>
-    <button onclick="editMessageFromPage()">Edit Message</button>
-
-    <hr>
-
+    <!-- Messages Display -->
     <h3>Messages:</h3>
     <div id="chat" style="border:1px solid #ccc; padding:10px; width:500px; height:300px; overflow:auto;"></div>
 
@@ -47,7 +44,7 @@
             if (!jwt) return alert("Please enter JWT token!");
 
             // Pass JWT via auth
-            socket = io("http://localhost:5000", {
+            socket = io("http://localhost:7000", {
                 transports: ["websocket"],
                 auth: { token: jwt }
             });
@@ -62,8 +59,12 @@
                 document.getElementById("chat").innerHTML += `<p>❌ Connection error: ${err.message}</p>`;
             });
 
-            socket.on("private-chat", (msg) => {
-                document.getElementById("chat").innerHTML += `<p><b>${msg.senderId}:</b> ${msg.message} ${msg.online ? "(online)" : "(offline)"}</p>`;
+            socket.on('chats', (data) => {
+                const msg = data.data.MsgToSend;
+                console.log("Received files:", msg.files);
+                msg.files.forEach(file => {
+                    console.log(file.url, file.name, file.type);
+                });
             });
 
             socket.on("message-edited", (msg) => {
@@ -71,23 +72,58 @@
             });
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             if (!socket) return alert("Connect first!");
-            const receiverId = document.getElementById("receiverId").value;
-            const text = document.getElementById("message").value;
 
-            socket.emit("private-chat", { receiverId, msg: text });
-            document.getElementById("chat").innerHTML += `<p><b>You:</b> ${text}</p>`;
+            const receiverId = document.getElementById("receiverId").value || null;
+            const gcid = document.getElementById("gcId").value || null;
+            const msg = document.getElementById("message").value || '';
+            const files = document.getElementById("fileInput").files;
+
+            let fileArray = [];
+            if (files.length > 0) {
+                for (let f of files) {
+                    const base64Data = await toBase64(f);
+                    fileArray.push({
+                        name: f.name,
+                        type: f.type,
+                        data: base64Data
+                    });
+                }
+            }
+
+            socket.emit("chats", {
+                receiverId,
+                gcid,
+                msg,
+                files: fileArray.length > 0 ? fileArray : null
+            });
+
+            appendMessage({ senderId: "You", message: msg, files: fileArray });
+            document.getElementById("message").value = '';
+            document.getElementById("fileInput").value = '';
         }
 
-        // New function to edit message from page inputs
-        function editMessageFromPage() {
-            if (!socket) return alert("Connect first!");
-            const msgId = document.getElementById("editMsgId").value;
-            const newText = document.getElementById("editMsgText").value;
-            if (!msgId || !newText) return alert("Fill both fields!");
+        function displayMessage(msg) {
+            appendMessage(`<b>You:</b> ${msg.message}`);
+            if (filesArray.length > 0) {
+                filesArray.forEach(f => displayMessage({ senderId: 'You', files: [{ url: f.url, name: f.name }] }));
+            }
+        }
 
-            socket.emit("update-msg", { mesgId: msgId, NewMsg: newText });
+        function appendMessage(text) {
+            const chat = document.getElementById("chat");
+            chat.innerHTML += `<p>${text}</p>`;
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = err => reject(err);
+            });
         }
     </script>
 </body>

@@ -13,12 +13,15 @@ const MsgSchema = new mongoose.Schema(
         },
         conversationId: {
             type: String,
-<<<<<<< HEAD
-            required: true,
-=======
->>>>>>> 8b8c338 (Made other Emits)
             default: null
         },
+        files: [
+            {
+                url: { type: String },
+                name: { type: String },
+                type: { type: String }
+            }
+        ],
         groupid: {
             type: mongoose.Types.ObjectId,
             ref: 'group',
@@ -26,7 +29,7 @@ const MsgSchema = new mongoose.Schema(
         },
         message: {
             type: String,
-            required: true
+            default: null
         },
         read: {
             type: Boolean,
@@ -41,6 +44,11 @@ const MsgSchema = new mongoose.Schema(
         timestamps: true
     }
 )
+
+MsgSchema.index({ conversationId: 1, createdAt: -1 });
+MsgSchema.index({ senderId: 1 });
+MsgSchema.index({ receiverId: 1 });
+MsgSchema.index({ groupid: 1 });
 
 const MsgModel = mongoose.model('message', MsgSchema)
 module.exports = MsgModel

@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-const AddMeber = async (GCId, MemberId, socket, OnlineUser, io) => {
-    try {
-        const group = await GroupModel.findById(GCId)
-        if (!group) return socket.emit('add-member-error', { message: 'Group dont found' });
-=======
 const GroupModel = require("../../Model/group.model.js");
 
 const AddMeber = async (GCId, MemberIds, socket, OnlineUser, io) => {
@@ -12,12 +6,9 @@ const AddMeber = async (GCId, MemberIds, socket, OnlineUser, io) => {
         if (!group) {
             return socket.emit('add-gc-member', { sucess: false, message: 'Group dont found' });
         }
->>>>>>> 8b8c338 (Made other Emits)
-
         const requestingUserId = socket.data.userId
 
         const admin = group.members.find(m => m.memberdetail.toString() === requestingUserId && m.isadmin)
-<<<<<<< HEAD
         if (!admin) {
             return socket.emit('add-member-error', { message: 'Only group admin can add members!' });
         }
@@ -53,7 +44,6 @@ const AddMeber = async (GCId, MemberIds, socket, OnlineUser, io) => {
         }
 
         savemember()
-=======
 
         if (!admin) {
             return socket.emit('add-member-error', { success: true, message: 'Only group admin can add members!' });
@@ -117,7 +107,6 @@ const AddMeber = async (GCId, MemberIds, socket, OnlineUser, io) => {
 
             savemember()
         }
->>>>>>> 8b8c338 (Made other Emits)
 
     } catch (error) {
         return socket.emit('add-member-error', { message: error.message || 'Somthing went wrong!' })

@@ -1,10 +1,5 @@
 const multer = require('multer')
-<<<<<<< HEAD
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'Avatars/')
-=======
 const fs = require('fs')
 const path = require('path')
 
@@ -17,7 +12,6 @@ if (!fs.existsSync(avatarDir)) {
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, avatarDir)
->>>>>>> 8b8c338 (Made other Emits)
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + '-' + file.originalname)

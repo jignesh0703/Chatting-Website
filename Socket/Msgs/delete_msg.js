@@ -48,10 +48,8 @@ const DeleteMsg = async (MsgId, socket, io, OnlineUser) => {
             }
         }
 
-<<<<<<< HEAD
-=======
+
         deleteMsg()
->>>>>>> 8b8c338 (Made other Emits)
         socket.emit('delete-sucessfully', { message: 'Message delete succesfully!' })
 
     } catch (error) {

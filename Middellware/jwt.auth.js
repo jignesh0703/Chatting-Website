@@ -2,11 +2,7 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 require('dotenv').config()
 
-<<<<<<< HEAD
-const key = Buffer.from(process.env.CRYPTO_KEY, 'utf8');
-=======
 const key = Buffer.from(process.env.CRYPTO_KEY, 'hex');
->>>>>>> 8b8c338 (Made other Emits)
 const decryptId = (encryptedId) => {
     const [ivHex, encrypted] = encryptedId.split(':');
     const iv = Buffer.from(ivHex, 'hex');
