@@ -1,9 +1,9 @@
-const { UserModel } = require("../Model/user.model")
+const { UserModel } = require("../Model/user.model.js")
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
-
-const MsgModel = require("../Model/message.model")
+const MsgModel = require("../Model/message.model.js")
+const redisClient = require('../redis/connect.redis.js')
 require('dotenv').config()
 
 const key = Buffer.from(process.env.CRYPTO_KEY, 'hex');
@@ -42,6 +42,8 @@ const Regitration = async (req, res) => {
         })
 
         await NewUser.save()
+
+        await redisClient.del('allUsers');
         return res.status(201).json({ message: 'User Registartion Succesfully!' })
 
     } catch (error) {
@@ -100,17 +102,31 @@ const Login = async (req, res) => {
 const FetchUserDatail = async (req, res) => {
     try {
         const id = req.id
+        const cacheKey = `user:${id}`
+
+        const cached = await redisClient.get(cacheKey)
+        if (cached) {
+            return res.status(200).json({
+                message: 'User detail fetched successfully!',
+                data: {
+                    FindUser: JSON.parse(cached)
+                },
+                source: 'cache'
+            });
+        }
 
         const FindUser = await UserModel.findById(id).select('-password -createdAt -updatedAt -__v')
         if (!FindUser) {
             return res.status(422).json({ message: 'Invalid id' })
         }
 
+        await redisClient.set(cacheKey, JSON.stringify(FindUser), { EX: 600 })
         return res.status(200).json({
             message: 'User datail fetch sucessfully!',
             data: {
                 FindUser
-            }
+            },
+            source: 'db'
         })
     } catch (error) {
         return res.status(500).json({ message: 'Somthinng went wrong, try again!' })
@@ -120,11 +136,24 @@ const FetchUserDatail = async (req, res) => {
 const FetchAllUsers = async (req, res) => {
     try {
         const LogedUserId = req.id
+        const cacheKey = 'allUsers'
+
+        const cached = await redisClient.get(cacheKey)
+        if (cached) {
+            return res.status(200).json({
+                message: 'Users fetched successfully!',
+                data: { FindUsers: JSON.parse(cached) },
+                source: 'cache'
+            });
+        }
+
         const FindUsers = await UserModel.find({ _id: { $ne: LogedUserId } })
 
         if (FindUsers.length === 0) {
             return res.status(200).json({ message: "No users exist at this time", data: [] });
         }
+
+        await redisClient.set(cacheKey, JSON.stringify(FindUsers), { EX: 600 })
 
         return res.status(200).json({
             message: 'Users FInd Succesfully!',
@@ -145,55 +174,68 @@ const FetchChats = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Login is required!' })
         }
 
-        const page = req.query.page
-        const limit = req.query.limit
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit
 
-        if (req.body.receiverId) {
-            const receiverId = req.body.receiverId
-            const conversationId = [id, receiverId].sort().join('-')
-            console.log(conversationId)
+        let cacheKey;
+        let messages;
 
-            const messages = await MsgModel
+        if (req.body.receiverId) {
+            const receiverId = req.body.receiverId;
+            const conversationId = [id, receiverId].sort().join('-');
+            cacheKey = `conversation:${conversationId}:page:${page}`;
+
+            const cached = await redisClient.get(cacheKey)
+            if (cached) {
+                return res.status(200).json({
+                    success: true,
+                    data: { messages: JSON.parse(cached) },
+                    source: 'cache' // optional, for debugging
+                });
+            }
+
+            messages = await MsgModel
                 .find({ conversationId })
                 .sort({ createdAt: -1 })
                 .select('-groupid -updatedAt -__v')
                 .skip(skip)
                 .limit(limit);
 
-            if (messages.length === 0) {
-                return res.status(204).json({ success: true, messages: "No messages to get" })
-            } else {
+        } else if (req.body.gcId) {
+            const gcId = req.body.gcId;
+            cacheKey = `group:${gcId}:page:${page}`;    
+
+            const cached = await redisClient.get(cacheKey)
+            if (cached) {
                 return res.status(200).json({
                     success: true,
-                    data: {
-                        messages
-                    }
-                })
+                    data: { messages: JSON.parse(cached) },
+                    source: 'cache' // optional, for debugging
+                });
             }
 
-        } else if (req.body.gcId) {
-            const gcId = req.body.gcId
-            const messages = await MsgModel
+            messages = await MsgModel
                 .find({ groupid: gcId })
                 .sort({ createdAt: -1 })
                 .select('-receiverId -conversationId -updatedAt -__v')
                 .skip(skip)
                 .limit(limit);
 
-            if (messages.length === 0) {
-                return res.status(204).json({ success: true, messages: "No messages to get" })
-            } else {
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        messages
-                    }
-                })
-            }
         } else {
-            return res.status(400).json({ success: false, message: 'Dont pass receiverid or gcid' })
+            return res.status(400).json({ success: false, message: 'Dont pass receiverid or gcid' });
         }
+
+        if (!messages || messages.length === 0) {
+            return res.status(204).json({ success: true, messages: "No messages to get" });
+        }
+
+        await redisClient.set(cacheKey, JSON.stringify(messages), { EX: 600 });
+        return res.status(200).json({
+            success: true,
+            data: { messages },
+            source: 'db' // optional, for debugging
+        });
 
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Somthing went wrong, try again!' })
