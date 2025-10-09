@@ -16,7 +16,6 @@ async function checkRedisConnection() {
     const pong = await redisClient.ping();
     console.log("PING response:", pong); // Should print "PONG"
 
-    await redisClient.quit(); // Disconnect
   } catch (err) {
     console.error("❌ Redis connection failed:", err.message);
   }

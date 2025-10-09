@@ -22,6 +22,10 @@ const Regitration = async (req, res) => {
             return res.status(400).json({ message: 'All feilds are required!' })
         }
 
+        username = username.trim()
+        email = email.trim()
+        password = password.trim()
+
         const image = req.file
         if (!image) {
             return res.status(400).json({ message: 'File is required!' })
@@ -30,6 +34,11 @@ const Regitration = async (req, res) => {
         const FindEmail = await UserModel.findOne({ email })
         if (FindEmail) {
             return res.status(409).json({ message: 'Email already exist, try another one' })
+        }
+
+        const FindUsername = await UserModel.findOne({ username })
+        if (FindUsername) {
+            return res.status(409).json({ message: 'Username already exist, try another one' })
         }
 
         const HashPass = await bcrypt.hash(password, 10)
@@ -54,10 +63,13 @@ const Regitration = async (req, res) => {
 
 const Login = async (req, res) => {
     try {
-        const { email, password } = req.body
+        let { email, password } = req.body
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password is required!' })
         }
+
+        email = email.trim()
+        password = password.trim()
 
         const FindEmail = await UserModel.findOne({ email }).select('-updatedAt -createdAt -__v')
         if (!FindEmail) {
@@ -204,7 +216,7 @@ const FetchChats = async (req, res) => {
 
         } else if (req.body.gcId) {
             const gcId = req.body.gcId;
-            cacheKey = `group:${gcId}:page:${page}`;    
+            cacheKey = `group:${gcId}:page:${page}`;
 
             const cached = await redisClient.get(cacheKey)
             if (cached) {

@@ -8,49 +8,8 @@ const addMeber = async (GCId, MemberIds, socket, onlineUser, io) => {
         }
         const requestingUserId = socket.data.userId
 
-        const admin = group.members.find(m => m.memberdetail.toString() === requestingUserId && m.isadmin)
-        if (!admin) {
-            return socket.emit('add-member-error', { message: 'Only group admin can add members!' });
-        }
-
-        if (group.members.some(m => m.memberdetail.toString() === MemberId)) {
-            return socket.emit('add-member-error', { message: 'Member already in group!' });
-        }
-
-        const newmemberdetail = { memberdetail: MemberId, isadmin: false }
-
-        group.members.forEach(userId => {
-            if (onlineUser.has(userId)) {
-                for (let socketId of onlineUser.get(userId)) {
-                    io.to(socketId).emit('member-added', { groupId: GCId, newMemberId: MemberId });
-                }
-            }
-        });
-
-        socket.emit('add-member-success', { groupId: GCId, newMemberId: MemberId });
-
-        const savemember = async (retry = 3, delay = 1000) => {
-            try {
-                group.members.push(newmemberdetail);
-                await group.save();
-                console.log(`Member ${MemberId} saved in ${group.gcname}`);
-            } catch (error) {
-                if (retry > 0) {
-                    setTimeout(() => {
-                        savemember(retry - 1, delay)
-                    }, delay);
-                }
-            }
-        }
-
-        savemember()
-
-        if (!admin) {
-            return socket.emit('add-member-error', { success: true, message: 'Only group admin can add members!' });
-        }
-
         for (const MemberId of MemberIds) {
-
+            console.log(group.members, MemberId)
             if (group.members.some(m => m.memberdetail.toString() === MemberId)) {
                 socket.emit('add-member-error', { sucess: false, message: 'Member already in group!' });
                 continue;
@@ -105,7 +64,7 @@ const addMeber = async (GCId, MemberIds, socket, onlineUser, io) => {
                 }
             }
 
-            savemember()
+           await savemember()
         }
 
     } catch (error) {

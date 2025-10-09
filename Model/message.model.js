@@ -49,6 +49,7 @@ MsgSchema.index({ conversationId: 1, createdAt: -1 });
 MsgSchema.index({ senderId: 1 });
 MsgSchema.index({ receiverId: 1 });
 MsgSchema.index({ groupid: 1 });
+MsgSchema.index({ message: "text" });
 
 const MsgModel = mongoose.model('message', MsgSchema)
 module.exports = MsgModel

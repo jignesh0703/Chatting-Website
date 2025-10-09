@@ -16,7 +16,7 @@ const deleteMsg = async (MsgId, socket, io, onlineUser) => {
             [FindMsg.senderId.toString(), FindMsg.receiverId.toString()].forEach(m => {
                 if (onlineUser.has(m)) {
                     for (let socketId of onlineUser.get(m)) {
-                        io.to(socketId).emit('message-deleted', { message: 'Message delete Succesfully!' })
+                        io.to(socketId).emit('message-deleted', { message: 'Message deleted!' })
                     }
                 }
             })
@@ -28,7 +28,7 @@ const deleteMsg = async (MsgId, socket, io, onlineUser) => {
                 const userid = m.memberdetail.toString()
                 if (onlineUser.has(userid)) {
                     for (let socketId of onlineUser.get(userid)) {
-                        socket.to(socketId).emit('message-deleted', { message: 'Message delete Succesfully!' })
+                        socket.to(socketId).emit('message-deleted', { message: 'Message deleted!' })
                     }
                 }
             })
@@ -47,7 +47,6 @@ const deleteMsg = async (MsgId, socket, io, onlineUser) => {
                 }
             }
         }
-
 
         deleteMsg()
         socket.emit('delete-sucessfully', { message: 'Message delete succesfully!' })

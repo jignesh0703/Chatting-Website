@@ -4,6 +4,9 @@ const addMeber = require('./Msgs/add_member.js')
 const deleteMsg = require('./Msgs/delete_msg.js')
 const chat_emit = require('./Msgs/chat.js')
 const removeMember = require('./Msgs/remove_member.js')
+const gave_Adimin = require('./Msgs/gave_admin.js')
+const remove_admin = require('./Msgs/remove_admin.js')
+const exitGC = require('./Msgs/exit_gc.js')
 
 let onlineUser = new Map()
 
@@ -63,7 +66,7 @@ function initSocket(server, socketAuth) {
             if (typeof data === 'string') {
                 values = JSON.parse(data)
             }
-            chat_emit(socket, onlineUser, io, values.msg, values.receiverId, values.gcid,values.files)
+            chat_emit(socket, onlineUser, io, values.msg, values.receiverId, values.gcid, values.files)
         })
 
         // socket.on('group-chat', async (data) => {
@@ -97,6 +100,14 @@ function initSocket(server, socketAuth) {
                 values = JSON.parse(data)
             }
             remove_admin(socket, io, values.gcid, values.memberid)
+        })
+
+        socket.on('exit-gc', async (data) => {
+            let values = data;
+            if (typeof values === 'string') {
+                values = JSON.parse(data)
+            }
+            exitGC(values.gcid, socket)
         })
 
         socket.on('disconnect', () => {

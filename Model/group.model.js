@@ -19,7 +19,7 @@ const GroupSchema = new mongoose.Schema(
                 memberdetail: {
                     type: mongoose.Types.ObjectId,
                     ref: 'user',
-                    require: true,
+                    require: true
                 },
                 isadmin: {
                     type: Boolean,

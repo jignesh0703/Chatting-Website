@@ -6,7 +6,6 @@ const remove_admin = async (socket, io, gcid, memberid) => {
         if (!group) {
             return socket.emit('remove-admin-error', { success: false, message: 'Group dont found!' })
         }
-        console.log(group)
 
         const requestingUserId = socket.data.userId
 
