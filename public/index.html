@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Socket.IO Chat with Files</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <h2>Socket.IO Chat Test</h2>
+
+    <!-- JWT Input -->
+    <label>JWT Token:</label>
+    <input id="token" placeholder="Paste your JWT here" style="width:400px" />
+    <button onclick="connectSocket()">Connect</button>
+    <hr>
+
+    <!-- Chat Inputs -->
+    <label>Send To (User ID) [Private Chat]:</label>
+    <input id="receiverId" placeholder="Receiver ID" /><br>
+
+    <label>Send To (Group ID) [Group Chat]:</label>
+    <input id="gcId" placeholder="Group ID" /><br>
+
+    <label>Message:</label>
+    <input id="message" placeholder="Your message" style="width:300px;" /><br>
+
+    <label>Files (optional):</label>
+    <input type="file" id="fileInput" multiple /><br>
+
+    <button onclick="sendMessage()">Send</button>
+    <hr>
+
+    <!-- Messages Display -->
+    <h3>Messages:</h3>
+    <div id="chat" style="border:1px solid #ccc; padding:10px; width:500px; height:300px; overflow:auto;"></div>
+
+    <script>
+        let socket;
+
+        function connectSocket() {
+            const jwt = document.getElementById("token").value;
+            if (!jwt) return alert("Please enter JWT token!");
+
+            // Pass JWT via auth
+            socket = io("http://localhost:7000", {
+                transports: ["websocket"],
+                auth: { token: jwt }
+            });
+
+            socket.on("connect", () => {
+                console.log("✅ Connected:", socket.id);
+                document.getElementById("chat").innerHTML += `<p>✅ Connected to server</p>`;
+            });
+
+            socket.on("connect_error", (err) => {
+                console.log("❌ Connection error:", err.message);
+                document.getElementById("chat").innerHTML += `<p>❌ Connection error: ${err.message}</p>`;
+            });
+
+            socket.on('chats', (data) => {
+                const msg = data.data.MsgToSend;
+                console.log("Received files:", msg.files);
+                msg.files.forEach(file => {
+                    console.log(file.url, file.name, file.type);
+                });
+            });
+
+            socket.on("message-edited", (msg) => {
+                document.getElementById("chat").innerHTML += `<p><b>${msg.senderId} (edited):</b> ${msg.message}</p>`;
+            });
+        }
+
+        async function sendMessage() {
+            if (!socket) return alert("Connect first!");
+
+            const receiverId = document.getElementById("receiverId").value || null;
+            const gcid = document.getElementById("gcId").value || null;
+            const msg = document.getElementById("message").value || '';
+            const files = document.getElementById("fileInput").files;
+
+            let fileArray = [];
+            if (files.length > 0) {
+                for (let f of files) {
+                    const base64Data = await toBase64(f);
+                    fileArray.push({
+                        name: f.name,
+                        type: f.type,
+                        data: base64Data
+                    });
+                }
+            }
+
+            socket.emit("chats", {
+                receiverId,
+                gcid,
+                msg,
+                files: fileArray.length > 0 ? fileArray : null
+            });
+
+            appendMessage({ senderId: "You", message: msg, files: fileArray });
+            document.getElementById("message").value = '';
+            document.getElementById("fileInput").value = '';
+        }
+
+        function displayMessage(msg) {
+            appendMessage(`<b>You:</b> ${msg.message}`);
+            if (filesArray.length > 0) {
+                filesArray.forEach(f => displayMessage({ senderId: 'You', files: [{ url: f.url, name: f.name }] }));
+            }
+        }
+
+        function appendMessage(text) {
+            const chat = document.getElementById("chat");
+            chat.innerHTML += `<p>${text}</p>`;
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = err => reject(err);
+            });
+        }
+    </script>
+</body>
+
+</html>
