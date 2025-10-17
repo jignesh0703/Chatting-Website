@@ -35,6 +35,11 @@ const MsgSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        readBy: {
+            type: mongoose.Types.ObjectId,
+            ref: 'user',
+            default: []
+        },
         edited: {
             type: String,
             default: false

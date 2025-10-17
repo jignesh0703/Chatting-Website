@@ -15,6 +15,10 @@ initSocket(server, socketAuth)
 ConnectDB()
     .then(
         server.listen(PORT, () => {
-            console.log(`http://localhost:${PORT}`)
+            console.log(`Server start at http://localhost:${PORT}`)
         })
     )
+
+setInterval(() => {
+    console.log(new Date().toLocaleString())
+}, 2000)

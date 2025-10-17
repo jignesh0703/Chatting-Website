@@ -7,10 +7,14 @@ const removeMember = require('./Msgs/remove_member.js')
 const gave_Adimin = require('./Msgs/gave_admin.js')
 const remove_admin = require('./Msgs/remove_admin.js')
 const exitGC = require('./Msgs/exit_gc.js')
+const markReadMsgs = require('./Msgs/markRead.js')
+const markAllMsgsRead = require('./Msgs/markAllMsgsRead.js')
 
 let onlineUser = new Map()
 
-// setInterval(() => console.log(onlineUser), 2000)
+// setInterval(() => {
+//     console.log(onlineUser)
+// }, 2000)
 
 function initSocket(server, socketAuth) {
     const io = new Server(server, {
@@ -110,6 +114,22 @@ function initSocket(server, socketAuth) {
             exitGC(values.gcid, socket)
         })
 
+        socket.on('mark-as-seen', async (data) => {
+            let values = data;
+            if (typeof values === 'string') {
+                values = JSON.parse(data)
+            }
+            markReadMsgs(socket, messagesId)
+        })
+
+        socket.on('mark-all-messages-read', async (data) => {
+            let values = data;
+            if (typeof values === 'string') {
+                values = JSON.parse(data)
+            }
+            markAllMsgsRead(socket)
+        })
+
         socket.on('disconnect', () => {
             console.log('New connection close')
             if (onlineUser.has(senderId)) {
@@ -125,43 +145,3 @@ function initSocket(server, socketAuth) {
 }
 
 module.exports = initSocket
-
-
-
-
-// socket.on('mark-as-read', async ({ conversationId, senderId }) => {
-//     const receiverId = socket.data.userId;
-
-//     // Update unread messages for this conversation
-//     await MsgModel.updateMany(
-//         { conversationId, senderId, receiverId, read: false },
-//         { read: true }
-//     );
-
-//     // Notify sender(s) that messages are read
-//     if (onlineUser.has(senderId)) {
-//         for (let sockId of onlineUser.get(senderId)) {
-//             io.to(sockId).emit('messages-read', { conversationId, receiverId });
-//         }
-//     }
-// });
-
-// socket.on('edit-message', async ({ messageId, newText }) => {
-//     const updatedMsg = await MsgModel.findByIdAndUpdate(
-//         messageId,
-//         { message: newText, edited: true },
-//         { new: true }
-//     );
-
-//     const senderId = updatedMsg.senderId.toString();
-//     const receiverId = updatedMsg.receiverId.toString();
-
-//     // Notify all active sockets of sender and receiver
-//     [senderId, receiverId].forEach(userId => {
-//         if (onlineUser.has(userId)) {
-//             for (let sockId of onlineUser.get(userId)) {
-//                 io.to(sockId).emit('message-edited', updatedMsg);
-//             }
-//         }
-//     });
-// });

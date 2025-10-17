@@ -13,6 +13,6 @@ app.use('/images', express.static('Avatars/'))
 
 app.use('/api/user', UserRoutes)
 app.use('/api/gc', GroupRoutes)
-app.use('/api/search', chatRoutes)
+app.use('/api/chat', chatRoutes)
 
 module.exports = app

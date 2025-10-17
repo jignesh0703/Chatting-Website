@@ -2,7 +2,6 @@ const { UserModel } = require("../Model/user.model.js")
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
-const MsgModel = require("../Model/message.model.js")
 const redisClient = require('../redis/connect.redis.js')
 require('dotenv').config()
 
@@ -179,85 +178,9 @@ const FetchAllUsers = async (req, res) => {
     }
 }
 
-const FetchChats = async (req, res) => {
-    try {
-        const id = req.id
-        if (!id) {
-            return res.status(400).json({ success: false, message: 'Login is required!' })
-        }
-
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
-        const skip = (page - 1) * limit
-
-        let cacheKey;
-        let messages;
-
-        if (req.body.receiverId) {
-            const receiverId = req.body.receiverId;
-            const conversationId = [id, receiverId].sort().join('-');
-            cacheKey = `conversation:${conversationId}:page:${page}`;
-
-            const cached = await redisClient.get(cacheKey)
-            if (cached) {
-                return res.status(200).json({
-                    success: true,
-                    data: { messages: JSON.parse(cached) },
-                    source: 'cache' // optional, for debugging
-                });
-            }
-
-            messages = await MsgModel
-                .find({ conversationId })
-                .sort({ createdAt: -1 })
-                .select('-groupid -updatedAt -__v')
-                .skip(skip)
-                .limit(limit);
-
-        } else if (req.body.gcId) {
-            const gcId = req.body.gcId;
-            cacheKey = `group:${gcId}:page:${page}`;
-
-            const cached = await redisClient.get(cacheKey)
-            if (cached) {
-                return res.status(200).json({
-                    success: true,
-                    data: { messages: JSON.parse(cached) },
-                    source: 'cache' // optional, for debugging
-                });
-            }
-
-            messages = await MsgModel
-                .find({ groupid: gcId })
-                .sort({ createdAt: -1 })
-                .select('-receiverId -conversationId -updatedAt -__v')
-                .skip(skip)
-                .limit(limit);
-
-        } else {
-            return res.status(400).json({ success: false, message: 'Dont pass receiverid or gcid' });
-        }
-
-        if (!messages || messages.length === 0) {
-            return res.status(204).json({ success: true, messages: "No messages to get" });
-        }
-
-        await redisClient.set(cacheKey, JSON.stringify(messages), { EX: 600 });
-        return res.status(200).json({
-            success: true,
-            data: { messages },
-            source: 'db' // optional, for debugging
-        });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, message: 'Somthing went wrong, try again!' })
-    }
-}
-
 module.exports = {
     Regitration,
     Login,
     FetchUserDatail,
-    FetchAllUsers,
-    FetchChats
+    FetchAllUsers
 }
