@@ -120,8 +120,26 @@ const FetchUserDatail = async (req, res) => {
         if (cached) {
             user = JSON.parse(cached);
         } else {
-            user = await UserModel.findById(id).select('-password -createdAt -updatedAt -__v')
+            user = await UserModel.findById(id).select('-password -createdAt -updatedAt -__v');
+            if (!user) return res.status(422).json({ message: "Invalid ID" });
+
+            await redisClient.set(cacheKey, JSON.stringify(user), { EX: 600 });
         }
+
+        const statusStr = await redisClient.hget('user_status', id);
+        const userStatus = statusStr ? JSON.parse(statusStr) : { online: false, lastSeen: null };
+
+        const result = {
+            ...user,
+            online: userStatus.online,
+            lastseen: userStatus.lastseen
+        };
+
+        return res.status(200).json({
+            message: 'User detail fetched successfully!',
+            data: { FindUser: result },
+            source: cached ? 'cache' : 'db'
+        });
 
     } catch (error) {
         return res.status(500).json({ message: 'Somthinng went wrong, try again!' })
@@ -130,35 +148,69 @@ const FetchUserDatail = async (req, res) => {
 
 const FetchAllUsers = async (req, res) => {
     try {
-        const LogedUserId = req.id
-        const cacheKey = 'allUsers'
+        const LogedUserId = req.id;
+        const cacheKey = 'allUsers';
 
-        const cached = await redisClient.get(cacheKey)
+        let users;
+        const cached = await redisClient.get(cacheKey);
         if (cached) {
-            return res.status(200).json({
-                message: 'Users fetched successfully!',
-                data: { FindUsers: JSON.parse(cached) },
-                source: 'cache'
-            });
+            users = JSON.parse(cached);
+        } else {
+            users = await UserModel.find({ _id: { $ne: LogedUserId } })
+                .select('-password -createdAt -updatedAt -__v');
+
+            if (users.length === 0) {
+                return res.status(200).json({ message: "No users exist at this time", data: [] });
+            }
+
+            await redisClient.set(cacheKey, JSON.stringify(users), { EX: 600 });
         }
 
-        const FindUsers = await UserModel.find({ _id: { $ne: LogedUserId } })
+        const allStatus = await redisClient.hgetall('user_status');
 
-        if (FindUsers.length === 0) {
-            return res.status(200).json({ message: "No users exist at this time", data: [] });
-        }
+        const result = users.map(user => {
+            const statusStr = allStatus[user._id] || null;
+            const status = statusStr ? JSON.parse(statusStr) : { online: false, lastSeen: null };
 
-        await redisClient.set(cacheKey, JSON.stringify(FindUsers), { EX: 600 })
+            return {
+                ...user,
+                online: status.online,
+                lastSeen: status.lastSeen
+            };
+        });
 
         return res.status(200).json({
-            message: 'Users FInd Succesfully!',
-            data: {
-                FindUsers
-            }
-        })
+            message: 'Users fetched successfully!',
+            data: { FindUsers: result },
+            source: cached ? 'cache' : 'db'
+        });
 
     } catch (error) {
-        return res.status(500).json({ message: "Somthing went wrong, try again!" })
+        console.error(error);
+        return res.status(500).json({ message: "Something went wrong, try again!" });
+    }
+};
+
+const findUser = async (req, res) => {
+    try {
+        let { user } = req.body;
+        user = user.trim();
+        const loggedUserId = req.id;
+
+        if (!user) return res.status(400).json({ message: "Username is required" });
+
+        const users = await UserModel.find({
+            _id: { $ne: loggedUserId },
+            username: { $regex: `^${user}`, $options: "i" }
+        }).select("-password -createdAt -updatedAt -__v");
+
+        return res.status(200).json({
+            message: "Users fetched successfully",
+            users
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Something went wrong, try again!" });
     }
 }
 
@@ -166,5 +218,6 @@ module.exports = {
     Regitration,
     Login,
     FetchUserDatail,
-    FetchAllUsers
+    FetchAllUsers,
+    findUser
 }

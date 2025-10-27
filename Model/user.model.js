@@ -11,14 +11,14 @@ const UserSchema = new mongoose.Schema(
             required: true
         },
         isonline: {
-            type: String,
+            type: Boolean,
             required: true,
             default: false
         },
         lastseen: {
             type: Date,
             required: true,
-            default: Date.now()
+            default: Date.now
         },
         avatar: {
             type: String,

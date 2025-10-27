@@ -33,7 +33,7 @@ function initSocket(server, socketAuth) {
         if (!senderId) return;
         console.log(`A new connnection is created : ${socket.id}`);
 
-        redisClient.hset('user_status', senderId, JSON.stringify({
+        await redisClient.hset('user_status', senderId, JSON.stringify({
             online: true,
             lastseen: new Date().toISOString()
         }));
@@ -152,9 +152,9 @@ function initSocket(server, socketAuth) {
                 if (onlineUser.get(senderId).size === 0) {
                     onlineUser.delete(senderId);
 
-                    await redisClient.hset("user_status", userId, JSON.stringify({
+                    await redisClient.hset("user_status", senderId, JSON.stringify({
                         online: false,
-                        lastSeen: new Date().toISOString()
+                        lastseen: new Date().toISOString()
                     }));
 
                     await UserModel.findByIdAndUpdate(senderId, {
