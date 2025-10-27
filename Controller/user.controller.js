@@ -112,33 +112,17 @@ const Login = async (req, res) => {
 
 const FetchUserDatail = async (req, res) => {
     try {
-        const id = req.id
-        const cacheKey = `user:${id}`
+        const id = req.id;
+        const cacheKey = `user:${id}`;
 
-        const cached = await redisClient.get(cacheKey)
+        let user;
+        const cached = await redisClient.get(cacheKey);
         if (cached) {
-            return res.status(200).json({
-                message: 'User detail fetched successfully!',
-                data: {
-                    FindUser: JSON.parse(cached)
-                },
-                source: 'cache'
-            });
+            user = JSON.parse(cached);
+        } else {
+            user = await UserModel.findById(id).select('-password -createdAt -updatedAt -__v')
         }
 
-        const FindUser = await UserModel.findById(id).select('-password -createdAt -updatedAt -__v')
-        if (!FindUser) {
-            return res.status(422).json({ message: 'Invalid id' })
-        }
-
-        await redisClient.set(cacheKey, JSON.stringify(FindUser), { EX: 600 })
-        return res.status(200).json({
-            message: 'User datail fetch sucessfully!',
-            data: {
-                FindUser
-            },
-            source: 'db'
-        })
     } catch (error) {
         return res.status(500).json({ message: 'Somthinng went wrong, try again!' })
     }

@@ -9,6 +9,8 @@ const remove_admin = require('./Msgs/remove_admin.js')
 const exitGC = require('./Msgs/exit_gc.js')
 const markReadMsgs = require('./Msgs/markRead.js')
 const markAllMsgsRead = require('./Msgs/markAllMsgsRead.js')
+const { UserModel } = require('../Model/user.model.js')
+const redisClient = require('../redis/connect.redis.js')
 
 let onlineUser = new Map()
 
@@ -26,12 +28,23 @@ function initSocket(server, socketAuth) {
 
     io.use(socketAuth)
 
-    io.on("connection", (socket) => {
-        const senderId = socket.data.userId
-        console.log(`A new connnection is created : ${socket.id}`)
+    io.on("connection", async (socket) => {
+        const senderId = socket.data.userId;
+        if (!senderId) return;
+        console.log(`A new connnection is created : ${socket.id}`);
 
-        if (!onlineUser.has(senderId)) onlineUser.set(senderId, new Set())
-        onlineUser.get(senderId).add(socket.id)
+        redisClient.hset('user_status', senderId, JSON.stringify({
+            online: true,
+            lastseen: new Date().toISOString()
+        }));
+
+        if (!onlineUser.has(senderId)) onlineUser.set(senderId, new Set());
+        onlineUser.get(senderId).add(socket.id);
+
+        io.emit('online-user', Array.from(onlineUser.keys()));
+
+        await UserModel.findByIdAndUpdate(senderId, { isonline: true, lastseen: new Date() });
+
         // socket.on('private-chat', async (data) => {
         //     let values = data;
         //     if (typeof data === "string") {
@@ -119,7 +132,7 @@ function initSocket(server, socketAuth) {
             if (typeof values === 'string') {
                 values = JSON.parse(data)
             }
-            markReadMsgs(socket, messagesId)
+            markReadMsgs(socket, values.messagesId)
         })
 
         socket.on('mark-all-messages-read', async (data) => {
@@ -130,14 +143,26 @@ function initSocket(server, socketAuth) {
             markAllMsgsRead(socket)
         })
 
-        socket.on('disconnect', () => {
+        socket.on('disconnect', async () => {
             console.log('New connection close')
             if (onlineUser.has(senderId)) {
-                onlineUser.get(senderId).delete(socket.id)
+                onlineUser.get(senderId).delete(socket.id);
 
                 // If no tabs left, remove user from onlineUser
                 if (onlineUser.get(senderId).size === 0) {
                     onlineUser.delete(senderId);
+
+                    await redisClient.hset("user_status", userId, JSON.stringify({
+                        online: false,
+                        lastSeen: new Date().toISOString()
+                    }));
+
+                    await UserModel.findByIdAndUpdate(senderId, {
+                        isonline: false,
+                        lastseen: new Date()
+                    });
+
+                    io.emit('online-user', Array.from(onlineUser.keys()));
                 }
             }
         })
