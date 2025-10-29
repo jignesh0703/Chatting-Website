@@ -12,11 +12,7 @@ const markAllMsgsRead = require('./Msgs/markAllMsgsRead.js')
 const { UserModel } = require('../Model/user.model.js')
 const redisClient = require('../redis/connect.redis.js')
 
-let onlineUser = new Map()
-
-// setInterval(() => {
-//     console.log(onlineUser)
-// }, 2000)
+let onlineUser = new Map();
 
 function initSocket(server, socketAuth) {
     const io = new Server(server, {
@@ -25,7 +21,7 @@ function initSocket(server, socketAuth) {
             credentials: true
         }
     })
-
+  
     io.use(socketAuth)
 
     io.on("connection", async (socket) => {
@@ -33,7 +29,7 @@ function initSocket(server, socketAuth) {
         if (!senderId) return;
         console.log(`A new connnection is created : ${socket.id}`);
 
-        await redisClient.hset('user_status', senderId, JSON.stringify({
+        await redisClient.hSet('user_status', senderId, JSON.stringify({
             online: true,
             lastseen: new Date().toISOString()
         }));
@@ -152,7 +148,7 @@ function initSocket(server, socketAuth) {
                 if (onlineUser.get(senderId).size === 0) {
                     onlineUser.delete(senderId);
 
-                    await redisClient.hset("user_status", senderId, JSON.stringify({
+                    await redisClient.hSet("user_status", senderId, JSON.stringify({
                         online: false,
                         lastseen: new Date().toISOString()
                     }));

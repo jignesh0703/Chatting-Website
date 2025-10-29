@@ -42,15 +42,6 @@ const CreateGC = async (req, res) => {
     }
 }
 
-const ListAllGC = async (req, res) => {
-    try {
-        const FindGCs = await GroupModel.find()
-        return res.status()
-    } catch (error) {
-        return res.status(500).json({ message: 'Somthink went wrong try again!' })
-    }
-}
-
 module.exports = {
     CreateGC
 }

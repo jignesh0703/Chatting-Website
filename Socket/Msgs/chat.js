@@ -1,43 +1,42 @@
-const { default: mongoose } = require("mongoose");
 const GroupModel = require("../../Model/group.model.js");
 const MsgModel = require("../../Model/message.model.js");
 const Save_File = require("../FIle_upload/save_file.js");
 const crypto = require('crypto');
 
-const encrptKey = (key) => {
-    const masterkey = Buffer.from(process.env.MASTER_KEY, 'hex');
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(process.env.MASTER_ALGORITHM, masterkey, iv);
-    const encrypted = Buffer.concat([cipher.update(key), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    return {
-        iv: iv.toString('hex'),
-        tag: tag.toString('hex'),
-        key: encrypted.toString('hex')
-    }
-}
+// const encrptKey = (key) => {
+//     const masterkey = Buffer.from(process.env.MASTER_KEY, 'hex');
+//     const iv = crypto.randomBytes(12);
+//     const cipher = crypto.createCipheriv(process.env.MASTER_ALGORITHM, masterkey, iv);
+//     const encrypted = Buffer.concat([cipher.update(key), cipher.final()]);
+//     const tag = cipher.getAuthTag();
+//     return {
+//         iv: iv.toString('hex'),
+//         tag: tag.toString('hex'),
+//         key: encrypted.toString('hex')
+//     }
+// }
 
-const encrpttMessages = (msg) => {
-    const key = crypto.randomBytes(32);
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(process.env.CHAT_ALGORITHM, key, iv);
-    const encrypted = Buffer.concat([cipher.update(msg, 'utf8'), cipher.final()]);
-    const tag = cipher.getAuthTag();
+// const encrpttMessages = (msg) => {
+//     const key = crypto.randomBytes(32);
+//     const iv = crypto.randomBytes(12);
+//     const cipher = crypto.createCipheriv(process.env.CHAT_ALGORITHM, key, iv);
+//     const encrypted = Buffer.concat([cipher.update(msg, 'utf8'), cipher.final()]);
+//     const tag = cipher.getAuthTag();
 
-    const encryptedKey = encrptKey(key)
-    return {
-        iv: iv.toString('hex'),
-        tag: tag.toString('hex'),
-        content: encrypted.toString('hex'),
+//     const encryptedKey = encrptKey(key)
+//     return {
+//         iv: iv.toString('hex'),
+//         tag: tag.toString('hex'),
+//         content: encrypted.toString('hex'),
 
-        // encrypt key data
-        keyinfo: {
-            key: encryptedKey.key,
-            iv: encryptedKey.iv,
-            tag: encryptedKey.tag
-        }
-    };
-}
+//         // encrypt key data
+//         keyinfo: {
+//             key: encryptedKey.key,
+//             iv: encryptedKey.iv,
+//             tag: encryptedKey.tag
+//         }
+//     };
+// }
 
 const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) => {
     try {
@@ -70,7 +69,7 @@ const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) =
             }
         };
 
-        const encryptedMsgStr = msg ? JSON.stringify(encrpttMessages(msg)) : null;
+        const msgStr = msg ? msg : null;
 
         if (receiverId) {
             // Private chat
@@ -81,7 +80,7 @@ const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) =
                 senderId,
                 receiverId,
                 conversationId,
-                message: encryptedMsgStr,
+                message: msgStr,
                 files: processedfile,
                 readBy: null
             };
@@ -115,7 +114,7 @@ const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) =
             const newmsg = {
                 senderId,
                 groupid: gcId,
-                message: encryptedMsgStr,
+                message: msgStr,
                 files: processedfile,
                 readBy: [senderId]
             };

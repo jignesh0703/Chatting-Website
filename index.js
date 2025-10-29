@@ -5,12 +5,12 @@ const socketAuth = require('./Socket/middelware.js')
 const initSocket = require('./Socket/io.js')
 const app = require('./app.js')
 
-dotenv.config()
+dotenv.config();
 
-const PORT = process.env.PORT
-const server = http.createServer(app)
+const PORT = process.env.PORT;
+const server = http.createServer(app);
 
-initSocket(server, socketAuth)
+initSocket(server, socketAuth);
 
 ConnectDB()
     .then(
@@ -21,4 +21,4 @@ ConnectDB()
 
 setInterval(() => {
     console.log(new Date().toLocaleString())
-}, 2000)
+}, 1000)
