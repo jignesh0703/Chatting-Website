@@ -18,12 +18,24 @@ const UserSchema = new mongoose.Schema(
         lastseen: {
             type: Date,
             required: true,
-            default: Date.now
+            default: new Date
         },
         avatar: {
             type: String,
             required: true
         },
+        hiddenUsers: [
+            {
+                type: mongoose.Types.ObjectId,
+                ref: 'user'
+            }
+        ],
+        hiddenGroups: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'group'
+            }
+        ],
         password: {
             type: String,
             required: true

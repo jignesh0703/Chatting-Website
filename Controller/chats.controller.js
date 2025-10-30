@@ -4,19 +4,41 @@ const { UserModel } = require("../Model/user.model.js");
 
 const findChat = async (req, res) => {
     try {
-        const { text } = req.body;
-        const result = await MsgModel.find({
-            message: { $regex: text, $options: 'i' }
+        const { receiverId, gcId } = req.body;
+        if (!receiverId && !gcId) {
+            return res.status(400).json({ message: 'ReceiverId or GcId is required!' });
+        }
+
+        let query = {};
+
+        if (receiverId) {
+            query = {
+                $or: [
+                    { senderId: req.user._id, receiverId },
+                    { senderId: receiverId, receiverId: req.user._id }
+                ]
+            };
+        } else if (gcId) {
+            query = { gcId };
+        }
+
+        const messages = await MsgModel.find({
+            ...query,
+            isDeleted: { $ne: true }
         })
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .lean();
+
         return res.status(200).json({
-            message: 'Messages find succesfully!',
-            data: {
-                result,
-                Length: result.length
-            }
-        })
+            message: 'Messages fetched successfully!',
+            count: messages.length,
+            data: messages.reverse() // reverse to show oldest first
+        });
+
     } catch (error) {
-        return res.status(500).json({ message: 'Internal server error!' })
+        console.error("findChat error:", error);
+        return res.status(500).json({ message: 'Internal server error!' });
     }
 };
 
@@ -31,7 +53,15 @@ const getPrivateChatInbox = async (req, res) => {
                     $or: [
                         { senderId: new mongoose.Types.ObjectId(userId) },
                         { receiverId: new mongoose.Types.ObjectId(userId) }
-                    ]
+                    ],
+                    $expr: {
+                        $not: {
+                            $in: [
+                                { $cond: [{ $eq: ['$senderId', new mongoose.Types.ObjectId(userId)] }, '$receiverId', '$senderId'] },
+                                await UserModel.findById(userId).select('hiddenUsers').then(u => u.hiddenUsers)
+                            ]
+                        }
+                    }
                 }
             },
             {
@@ -90,10 +120,14 @@ const getPrivateChatInbox = async (req, res) => {
 const getGroupChatIndox = async (req, res) => {
     try {
         const userId = req.id;
+
+        const user = await UserModel.findById(userId).select('hiddenGroups');
+        const hiddenGroups = user?.hiddenGroups || [];
+        
         const message = await MsgModel.aggregate([
             {
                 $match: {
-                    groupid: { $ne: null }
+                    groupid: { $ne: null, $nin: hiddenGroups }
                 }
             },
             {
@@ -209,6 +243,21 @@ const getUnreadAndRecentMsgs = async (req, res) => {
                 .limit(20);
         }
 
+        const processMessages = (msgs) => msgs.map((msg) => {
+            if (msg.isDeleted) {
+                return {
+                    ...msg,
+                    text: null,
+                    deleted: true,
+                    placeholder: 'This messsage was deleted!'
+                };
+            }
+            return msg;
+        });
+
+        unreadMsgs = processMessages(unreadMsgs);
+        recentReadMsgs = processMessages(recentReadMsgs);
+
         return res.status(200).json({
             success: true,
             message: "Messages fetched successfully!",
@@ -254,7 +303,7 @@ const fetchOlderReadMessages = async (req, res) => {
             }
         }
 
-        const messages = await MsgModel
+        let messages = await MsgModel
             .find(filter)
             .sort({ createdAt: -1 })
             .limit(limit)
@@ -263,6 +312,18 @@ const fetchOlderReadMessages = async (req, res) => {
         if (!messages.length) {
             return res.status(204).json({ success: true, message: 'No more messages' })
         }
+
+        messages = messages.map((msg) => {
+            if (msg.isDeleted) {
+                return {
+                    ...msg,
+                    text: null,
+                    deleted: true,
+                    placeholder: 'This message was deleted!'
+                }
+            }
+            return msg;
+        });
 
         return res.status(200).json({
             success: true,
@@ -318,7 +379,19 @@ const fetchMessageContext = async (req, res) => {
             .sort({ createdAt: 1 })
             .limit(parseInt(limitAfter));
 
-        const contextMsgs = [...beforeMessages.reverse(), centerMsg, ...afterMessages];
+        let contextMsgs = [...beforeMessages.reverse(), centerMsg, ...afterMessages];
+
+        contextMsgs = contextMsgs.map((msg) => {
+            if (msg.isDeleted) {
+                return {
+                    ...msg,
+                    text: null,
+                    deleted: true,
+                    placeholder: 'This message was deleted!'
+                };
+            }
+            return msg;
+        })
 
         return res.status(200).json({
             success: true,

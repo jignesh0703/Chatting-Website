@@ -43,6 +43,14 @@ const MsgSchema = new mongoose.Schema(
         edited: {
             type: String,
             default: false
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
+        },
+        deletedAt: {
+            type: Date,
+            default: null
         }
     },
     {

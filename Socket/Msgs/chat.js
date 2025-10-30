@@ -87,6 +87,13 @@ const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) =
 
             const savedMsg = await saveMessage(MsgToSend);
 
+            await UserModel.findByIdAndUpdate(receiverId, {
+                $pull: { hiddenUsers: senderId }
+            });
+            await UserModel.findByIdAndUpdate(senderId, {
+                $pull: { hiddenUsers: receiverId }
+            });
+
             // Emit to receiver if online
             if (onlineUser.has(receiverId)) {
                 for (let sockId of onlineUser.get(receiverId)) {
@@ -120,6 +127,11 @@ const chat_emit = async (socket, onlineUser, io, msg, receiverId, gcId, files) =
             };
 
             const savedMsg = await saveMessage(newmsg);
+
+            await UserModel.updateMany(
+                { _id: { $in: group.members.map(m => m.memberdetail) } },
+                { $pull: { hiddenGroups: gcId } }
+            );
 
             socket.emit('my-chats', { success: true, data: savedMsg });
 

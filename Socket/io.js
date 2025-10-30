@@ -11,6 +11,8 @@ const markReadMsgs = require('./Msgs/markRead.js')
 const markAllMsgsRead = require('./Msgs/markAllMsgsRead.js')
 const { UserModel } = require('../Model/user.model.js')
 const redisClient = require('../redis/connect.redis.js')
+const restoreMsg = require('./Msgs/restore_deletedMsg.js')
+const hideChat = require('./Msgs/hideChat.js')
 
 let onlineUser = new Map();
 
@@ -21,7 +23,7 @@ function initSocket(server, socketAuth) {
             credentials: true
         }
     })
-  
+
     io.use(socketAuth)
 
     io.on("connection", async (socket) => {
@@ -134,9 +136,25 @@ function initSocket(server, socketAuth) {
         socket.on('mark-all-messages-read', async (data) => {
             let values = data;
             if (typeof values === 'string') {
-                values = JSON.parse(data)
+                values = JSON.parse(data);
             }
-            markAllMsgsRead(socket)
+            markAllMsgsRead(socket);
+        })
+
+        socket.on('restore-msg', async (data) => {
+            let values = data;
+            if (typeof values === 'string') {
+                values = JSON.parse(data);
+            }
+            restoreMsg(MsgId, socket);
+        })
+
+        socket.on('hide-chat', async (data) => {
+            let values = data;
+            if (typeof values === 'string') {
+                values = JSON.parse(data);
+            }
+            hideChat(targetUserId, socket);
         })
 
         socket.on('disconnect', async () => {
